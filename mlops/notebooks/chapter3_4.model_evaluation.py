@@ -1,5 +1,21 @@
 # Databricks notebook source
 # ruff: noqa
+%pip install .. 
+
+# COMMAND ----------
+
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC We can’t evaluate the impact of updated data and compare the new model to the old one without actually introducing new data. Let’s simulate the arrival of new data by generating a synthetic dataset containing a full month of hotel bookings.
+# MAGIC
+# MAGIC DataProcessor class definition  includes the generate_synthetic_df method. Then we can provide the number of observations to generate. It takes an optional max_date argument referring to the timestamp, after which the data must be generated. If not provided, max_date is taken from the hotel_booking table. We use the svd package and GaussianCopulaSynthesizer to generate the data with similar distribution as the provided dataset. 
+
+# COMMAND ----------
+
+
 
 import pandas as pd
 from pyspark.sql import SparkSession
@@ -19,9 +35,17 @@ df = pd.read_csv("../data/booking.csv")
 data_processor = DataProcessor(df=df, config=cfg, spark=spark)
 data_processor.preprocess()
 data_processor.generate_synthetic_df(n=1000, max_date=None)
+data_processor.df["arrival_month"] = data_processor.df["arrival_month"].astype("int32")
 data_processor.save_to_catalog()
 
+
 # COMMAND ----------
+
+# MAGIC %md
+# MAGIC Then we load the data (where the test set includes the newly generated month of data, and the train set 12 months before) and train the model:
+
+# COMMAND ----------
+
 from hotel_booking.models.lightgbm_model import LightGBMModel
 
 data_loader = DataLoader(spark=spark, config=cfg)
@@ -33,6 +57,12 @@ model.train(X_train=X_train,
             y_train=y_train)
 
 # COMMAND ----------
+
+# MAGIC %md
+# MAGIC The code for model logging is now also added to the LightGBMModel class. This is how it can be used:
+
+# COMMAND ----------
+
 tags=Tags(**{"git_sha": "1234567890abcd", "branch": "main"})
 
 model_info = model.log_model(
@@ -45,9 +75,13 @@ model_info = model.log_model(
     test_set_spark=data_loader.test_set_spark,
     test_query=data_loader.test_query
     )
+
 # COMMAND ----------
+
 metrics_new = model.metrics
+
 # COMMAND ----------
+
 import mlflow
 
 sklearn_model_name = f"{cfg.catalog}.{cfg.schema}.hotel_booking_basic"
@@ -65,5 +99,6 @@ result = mlflow.models.evaluate(
 metrics_old = result.metrics
 
 # COMMAND ----------
+
 if metrics_new['root_mean_squared_error'] < metrics_old['root_mean_squared_error']:
     model.register_model(model_name=sklearn_model_name, tags=tags)

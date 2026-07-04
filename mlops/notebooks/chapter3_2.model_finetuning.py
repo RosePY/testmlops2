@@ -1,5 +1,28 @@
 # Databricks notebook source
 # ruff: noqa
+
+# COMMAND ----------
+
+# MAGIC %pip install .. 
+
+# COMMAND ----------
+
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Our example dataset contains records from 2017-05-20 to 2018-12-31. Hotel prices are seasonal, and it makes sense to include the whole year of data in the training set. By including more than 12 months, we’ll have more samples of data for certain months, which may harm model performance. We’ll use time-based splits, which means that we’ll train on 12 months of data, use the subsequent month for validation (we use validation set in the hyperparameter tuning), and one month further for testing.
+# MAGIC Check DataLoader class under the hotel_booking.data module
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Load a training and validation set for hyperparameter tuning (where the validation set ends on 2018-11-30):
+
+# COMMAND ----------
+
+
 import os
 from datetime import datetime
 
@@ -21,6 +44,7 @@ X_train, y_train, X_valid, y_valid = data_loader.split(
 )
 
 # COMMAND ----------
+
 from ray import tune
 
 param_space = {
@@ -86,6 +110,7 @@ def train_with_nested_mlflow(
 
 
 # COMMAND ----------
+
 from databricks.sdk import WorkspaceClient
 
 w = WorkspaceClient()
@@ -93,6 +118,7 @@ os.environ["DATABRICKS_HOST"] = w.config.host
 os.environ["DATABRICKS_TOKEN"] = w.tokens.create(lifetime_seconds=1200).token_value
 
 # COMMAND ----------
+
 # for distributed, use this:
 # from ray.util.spark import setup_ray_cluster
 
@@ -101,7 +127,9 @@ os.environ["DATABRICKS_TOKEN"] = w.tokens.create(lifetime_seconds=1200).token_va
 #   max_worker_nodes=8,
 # )
 # os.environ['RAY_ADDRESS'] = ray_conf[0]
+
 # COMMAND ----------
+
 from ray.tune.search.optuna import OptunaSearch
 
 mlflow.set_experiment("/Shared/hotel-booking-finetuning")
@@ -136,5 +164,6 @@ with mlflow.start_run(
     results = tuner.fit()
 
 # COMMAND ----------
+
 best_result = results.get_best_result(metric="rmse", mode="min")
 best_result.config

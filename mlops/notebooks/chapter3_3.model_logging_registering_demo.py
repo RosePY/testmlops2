@@ -287,11 +287,28 @@ model_version = client.get_model_version_by_alias(alias="latest-model", name=mod
 
 # COMMAND ----------
 
-   import subprocess
-   git_sha = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
-   branch  = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode().strip()
-   print(git_sha, branch)
+git_sha = "3e8ae31"   
+branch  = "main"                
+
+from hotel_booking.config import Tags
+tags = Tags(**{"git_sha": git_sha, "branch": branch})
 
 # COMMAND ----------
 
+model_name = (
+    f"{cfg.catalog}.{cfg.schema}.hotel_booking_basic2"
+)
+registered_model = mlflow.register_model(
+    model_uri=logged_model.model_uri,
+    name=model_name,
+    tags=tags.to_dict(),
+)
 
+# COMMAND ----------
+
+client = MlflowClient()
+client.set_registered_model_alias(
+    name=model_name,
+    alias="latest-model",
+    version=registered_model.version,
+)
