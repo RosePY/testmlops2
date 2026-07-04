@@ -1,3 +1,5 @@
+
+
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -19,6 +21,8 @@ class DataLoader:
         self.cfg = config
         self.spark = spark
 
+     #The split method outputs X_train, y_train, X_test, and y_test which belong to the right time period from the hotel_booking table, and are used further to train the model. The split method accepts an optional version argument, which refers to the version of the delta table. The query will allow us to get the exact version of data used for training, even if data was modified later, thanks to the time travel functionality of delta tables. 
+     #Notice that the split method uses pyspark to read the delta table, and then transforms the pyspark dataframe to pandas (which is required as input for the Light Gradient Boosting Machine (LightGBM) model that we are going to train later).
     def split(
         self,
         test_months: int = 1,
