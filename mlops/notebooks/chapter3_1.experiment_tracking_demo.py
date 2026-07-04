@@ -1,5 +1,6 @@
 # Databricks notebook source
-# MAGIC %pip install .. 
+# ruff: noqa
+%pip install .. 
 
 # COMMAND ----------
 
@@ -7,7 +8,7 @@ dbutils.library.restartPython()
 
 # COMMAND ----------
 
-# ruff: noqa
+
 import json
 import os
 
