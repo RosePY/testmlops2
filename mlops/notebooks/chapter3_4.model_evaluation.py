@@ -63,7 +63,7 @@ model.train(X_train=X_train,
 
 # COMMAND ----------
 
-tags=Tags(**{"git_sha": "1234567890abcd", "branch": "main"})
+tags=Tags(**{"git_sha": "d294dca", "branch": "main"})
 
 model_info = model.log_model(
     experiment_name="/Shared/hotel-booking-training",
@@ -79,6 +79,11 @@ model_info = model.log_model(
 # COMMAND ----------
 
 metrics_new = model.metrics
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Let’s now evaluate the currently registered latest model against the new test set:
 
 # COMMAND ----------
 
@@ -100,5 +105,36 @@ metrics_old = result.metrics
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC
+# MAGIC Previously, we were evaluating model performance based on the RMSE. If this metric for the new model is lower than for the old model, we can proceed with registering the model:
+
+# COMMAND ----------
+
+print(metrics_new['root_mean_squared_error'], metrics_old['root_mean_squared_error'])
+
+# COMMAND ----------
+
 if metrics_new['root_mean_squared_error'] < metrics_old['root_mean_squared_error']:
     model.register_model(model_name=sklearn_model_name, tags=tags)
+
+# COMMAND ----------
+
+#    def register_model(self: "LightGBMModel", model_name: str, tags: Tags) -> None:
+#        """Register the model in MLflow Model Registry."""
+#        client = MlflowClient()
+#        registered_model = mlflow.register_model(
+#                model_uri=self.model_info.model_uri,
+#                name=model_name,
+#                tags=tags.to_dict(),
+#            )
+#        client.set_registered_model_alias(
+#            name=model_name,
+#            alias="latest-model",
+#            version=registered_model.version,
+#        )
+#        return registered_model.version
+
+# COMMAND ----------
+
+
